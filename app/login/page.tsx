@@ -13,7 +13,7 @@ export default function LoginPage() {
     setLoading(true);
     await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || location.origin}/auth/callback` },
     });
     setSent(true);
     setLoading(false);

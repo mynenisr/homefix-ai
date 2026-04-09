@@ -1,9 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { CaseCategory, Severity } from './database.types';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Lazy-init so the API key is read at request time, not module load time
+function getClient() {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) console.error('[HomeFix] ANTHROPIC_API_KEY is not set');
+  return new Anthropic({ apiKey: key });
+}
 
 const SYSTEM_PROMPT = `You are HomeFixAI, an expert home maintenance triage assistant. You classify home repair issues, assess severity, identify safety hazards, and provide actionable guidance.
 
@@ -59,7 +62,7 @@ export async function classifyIssue(
     .replace('{photoContext}', photoContext);
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await getClient().messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,

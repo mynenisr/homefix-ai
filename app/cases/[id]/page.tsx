@@ -9,6 +9,15 @@ export default async function CaseDetail({ params }: { params: { id: string } })
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');
 
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role, name')
+    .eq('id', session.user.id)
+    .single();
+
+  const role = profile?.role ?? 'HOMEOWNER';
+  const isAdmin = role === 'ADMIN' || role === 'PROPERTY_MANAGER';
+
   const { data: c } = await supabase
     .from('cases')
     .select('*, user:users(name, email), vendor:vendors(name, phone, tier, rating), timeline:case_timeline(*)')
@@ -37,7 +46,7 @@ export default async function CaseDetail({ params }: { params: { id: string } })
 
   return (
     <>
-      <Nav />
+      <Nav role={role} />
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between">
@@ -93,8 +102,8 @@ export default async function CaseDetail({ params }: { params: { id: string } })
               </div>
             )}
 
-            {/* Vendor approval section */}
-            {suggestedVendors.length > 0 && (
+            {/* Vendor approval section — admin only */}
+            {isAdmin && suggestedVendors.length > 0 && (
               <VendorApproval caseId={c.id} vendors={suggestedVendors} />
             )}
 

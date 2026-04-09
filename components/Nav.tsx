@@ -3,14 +3,20 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase';
 
-export default function Nav() {
+interface NavProps {
+  role?: string;
+}
+
+export default function Nav({ role }: NavProps) {
   const path = usePathname();
   const router = useRouter();
   const supabase = createBrowserClient();
+  const isAdmin = role === 'ADMIN' || role === 'PROPERTY_MANAGER';
 
   const links = [
-    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard', label: isAdmin ? 'All Cases' : 'My Cases' },
     { href: '/cases/new', label: 'New Case' },
+    ...(isAdmin ? [{ href: '/admin/vendors', label: 'Vendors' }] : []),
   ];
 
   async function signOut() {

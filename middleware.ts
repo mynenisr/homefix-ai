@@ -26,17 +26,29 @@ export async function middleware(req: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
-  const isAuthPage = req.nextUrl.pathname.startsWith('/login');
-  const isCallback = req.nextUrl.pathname.startsWith('/auth/callback');
+  const path = req.nextUrl.pathname;
 
-  if (isCallback) return res; // always let callback through
+  // Always allow
+  if (path.startsWith('/auth/callback') || path.startsWith('/_next') || path === '/favicon.ico') {
+    return res;
+  }
 
-  if (!session && !isAuthPage) {
+  // Unauthenticated → login
+  if (!session) {
+    if (path.startsWith('/login')) return res;
     return NextResponse.redirect(new URL('/login', req.url));
   }
-  if (session && isAuthPage) {
+
+  // Authenticated on login page → dashboard
+  if (path.startsWith('/login')) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
+
+  // Store role in header so server components can read it without extra DB call
+  const role = session.user.user_metadata?.role ?? 'HOMEOWNER';
+  res.headers.set('x-user-role', role);
+  res.headers.set('x-user-id', session.user.id);
+
   return res;
 }
 

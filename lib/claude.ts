@@ -74,10 +74,13 @@ export async function classifyIssue(
       throw new Error('Unexpected response type');
     }
 
-    const result = JSON.parse(content.text) as TriageResult;
+    // Strip markdown code fences if Claude wraps the JSON
+    const raw = content.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    console.log('[HomeFix] Claude raw response:', raw.slice(0, 200));
+    const result = JSON.parse(raw) as TriageResult;
     return result;
   } catch (error) {
-    console.error('Claude classification error:', error);
+    console.error('[HomeFix] Claude classification error:', error);
     // Return a safe default
     return {
       category: 'GENERAL',

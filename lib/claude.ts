@@ -54,19 +54,31 @@ export async function classifyIssue(
   photoUrl?: string
 ): Promise<TriageResult> {
   const photoContext = photoUrl
-    ? `Photo provided: ${photoUrl} (analyze visual indicators if possible)`
+    ? 'A photo has been attached — use it to refine your diagnosis.'
     : 'No photo provided.';
 
   const prompt = CLASSIFICATION_PROMPT
     .replace('{description}', description)
     .replace('{photoContext}', photoContext);
 
+  // Build message content — include image block if a photo URL is available
+  type ContentBlock =
+    | { type: 'text'; text: string }
+    | { type: 'image'; source: { type: 'url'; url: string } };
+
+  const userContent: ContentBlock[] = photoUrl
+    ? [
+        { type: 'image', source: { type: 'url', url: photoUrl } },
+        { type: 'text', text: prompt },
+      ]
+    : [{ type: 'text', text: prompt }];
+
   try {
     const message = await getClient().messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: userContent }],
     });
 
     const content = message.content[0];

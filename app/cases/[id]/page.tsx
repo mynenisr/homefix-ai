@@ -81,6 +81,24 @@ export default async function CaseDetail({ params }: { params: { id: string } })
               {c.address && <p className="text-xs text-gray-400 mt-2">📍 {c.address}</p>}
             </div>
 
+            {/* Photos */}
+            {c.photo_urls?.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <p className="text-sm font-medium text-gray-500 mb-3">Photos</p>
+                <div className="flex gap-3 flex-wrap">
+                  {c.photo_urls.map((url: string, i: number) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={url}
+                        alt={`Case photo ${i + 1}`}
+                        className="h-32 w-auto rounded-lg object-cover border hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {c.diagnosis && (
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <p className="text-sm font-medium text-gray-500 mb-2">AI Diagnosis</p>

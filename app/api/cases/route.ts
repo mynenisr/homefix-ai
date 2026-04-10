@@ -18,13 +18,13 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { description, address, category } = body;
+  const { description, address, category, photoUrls = [] } = body;
 
   // 1. Safety check first
   const safety = await checkSafety(description);
 
-  // 2. AI triage
-  const triage = await classifyIssue(description);
+  // 2. AI triage — pass first photo URL for vision analysis if present
+  const triage = await classifyIssue(description, photoUrls[0]);
 
   // 3. Create case
   const { data: newCase, error } = await supabase
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       playbook: triage.playbook,
       safety_flags: safety.triggers,
       confidence: triage.confidence,
+      photo_urls: photoUrls,
     })
     .select()
     .single();

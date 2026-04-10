@@ -3,6 +3,8 @@ import { redirect, notFound } from 'next/navigation';
 import Nav from '@/components/Nav';
 import { StatusBadge, SeverityBadge } from '@/components/StatusBadge';
 import VendorApproval from './VendorApproval';
+import CompleteButton from './CompleteButton';
+import FeedbackForm from './FeedbackForm';
 
 export default async function CaseDetail({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -20,7 +22,7 @@ export default async function CaseDetail({ params }: { params: { id: string } })
 
   const { data: c } = await supabase
     .from('cases')
-    .select('*, user:users(name, email), vendor:vendors(name, phone, tier, rating), timeline:case_timeline(*)')
+    .select('*, user:users(name, email), vendor:vendors(id, name, phone, tier, rating), timeline:case_timeline(*)')
     .eq('id', params.id)
     .single();
 
@@ -40,9 +42,21 @@ export default async function CaseDetail({ params }: { params: { id: string } })
     suggestedVendors = data ?? [];
   }
 
+  // Check if current user already left feedback
+  const { data: existingFeedback } = await supabase
+    .from('feedback')
+    .select('id, rating, comment, tags')
+    .eq('case_id', c.id)
+    .eq('user_id', session.user.id)
+    .single();
+
   const timeline = (c.timeline ?? []).sort(
     (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
+
+  const isCompleted = c.status === 'COMPLETED' || c.status === 'CLOSED';
+  const canMarkComplete = isAdmin && ['SCHEDULED', 'IN_PROGRESS'].includes(c.status);
+  const showFeedbackForm = !isAdmin && isCompleted && !existingFeedback;
 
   return (
     <>
@@ -56,9 +70,10 @@ export default async function CaseDetail({ params }: { params: { id: string } })
               Submitted by {c.user?.name ?? 'Unknown'} · {new Date(c.created_at).toLocaleDateString()}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <SeverityBadge severity={c.severity} />
             <StatusBadge status={c.status} />
+            {canMarkComplete && <CompleteButton caseId={c.id} />}
           </div>
         </div>
 
@@ -131,7 +146,46 @@ export default async function CaseDetail({ params }: { params: { id: string } })
                 <p className="text-sm font-medium text-gray-500 mb-2">Assigned Vendor</p>
                 <p className="font-medium">{c.vendor.name}</p>
                 <p className="text-sm text-gray-500">{c.vendor.phone}</p>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{c.vendor.tier}</span>
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  {c.vendor.tier}
+                </span>
+                {c.vendor.rating && (
+                  <span className="ml-2 text-xs text-gray-500">★ {Number(c.vendor.rating).toFixed(1)}</span>
+                )}
+              </div>
+            )}
+
+            {/* Feedback form — homeowner, completed case, not yet rated */}
+            {showFeedbackForm && (
+              <FeedbackForm
+                caseId={c.id}
+                vendorId={c.vendor?.id}
+                vendorName={c.vendor?.name}
+              />
+            )}
+
+            {/* Already submitted feedback */}
+            {!isAdmin && isCompleted && existingFeedback && (
+              <div className="bg-gray-50 rounded-xl p-5 border">
+                <p className="text-sm font-medium text-gray-500 mb-2">Your Feedback</p>
+                <div className="flex items-center gap-1 mb-2">
+                  {[1,2,3,4,5].map(s => (
+                    <span key={s} className={`text-lg ${s <= existingFeedback.rating ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                  ))}
+                  <span className="ml-2 text-sm text-gray-500">
+                    {['','Poor','Fair','Good','Great','Excellent'][existingFeedback.rating]}
+                  </span>
+                </div>
+                {existingFeedback.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {existingFeedback.tags.map((tag: string) => (
+                      <span key={tag} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{tag}</span>
+                    ))}
+                  </div>
+                )}
+                {existingFeedback.comment && (
+                  <p className="text-sm text-gray-600 italic">"{existingFeedback.comment}"</p>
+                )}
               </div>
             )}
           </div>
@@ -142,9 +196,15 @@ export default async function CaseDetail({ params }: { params: { id: string } })
             <div className="space-y-4">
               {timeline.map((t: any) => (
                 <div key={t.id} className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                    t.stage === 'EMERGENCY' ? 'bg-red-400' :
+                    t.stage === 'COMPLETED' ? 'bg-green-400' :
+                    'bg-blue-400'
+                  }`} />
                   <div>
-                    <p className="text-xs text-gray-500">{t.actor} · {new Date(t.created_at).toLocaleTimeString()}</p>
+                    <p className="text-xs text-gray-500">
+                      {t.actor} · {new Date(t.created_at).toLocaleTimeString()}
+                    </p>
                     <p className="text-sm">{t.description}</p>
                   </div>
                 </div>

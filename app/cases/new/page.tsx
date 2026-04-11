@@ -17,6 +17,7 @@ export default function NewCase() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [error, setError] = useState('');
+  const [offTopic, setOffTopic] = useState(false);
 
   function set(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }));
@@ -60,6 +61,7 @@ export default function NewCase() {
     if (!form.description.trim()) return;
     setLoading(true);
     setError('');
+    setOffTopic(false);
 
     try {
       // Get current user for storage path
@@ -79,7 +81,11 @@ export default function NewCase() {
           photoUrls: photoUrl ? [photoUrl] : [],
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const body = await res.json();
+        if (body.offTopic) { setOffTopic(true); setError(body.error); setLoading(false); setUploadProgress(''); return; }
+        throw new Error(body.error ?? res.statusText);
+      }
       const { id } = await res.json();
       router.push(`/cases/${id}`);
     } catch (err: any) {
@@ -167,7 +173,13 @@ export default function NewCase() {
             )}
           </div>
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {offTopic && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm font-semibold text-amber-800 mb-1">⚠️ Outside HomeFix Scope</p>
+              <p className="text-sm text-amber-700">{error}</p>
+            </div>
+          )}
+          {!offTopic && error && <p className="text-red-600 text-sm">{error}</p>}
 
           <button
             type="submit"

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
-import { classifyIssue, checkSafety } from '@/lib/claude';
+import { classifyIssue, checkSafety, OffTopicError } from '@/lib/claude';
 
 export async function GET() {
   const supabase = createServerClient();
@@ -20,11 +20,19 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { description, address, category, photoUrls = [] } = body;
 
-  // 1. Safety check first
+  // 1. Safety check first (keyword-based, no AI cost)
   const safety = await checkSafety(description);
 
-  // 2. AI triage — pass first photo URL for vision analysis if present
-  const triage = await classifyIssue(description, photoUrls[0]);
+  // 2. AI triage — throws OffTopicError if not home-repair related
+  let triage;
+  try {
+    triage = await classifyIssue(description, photoUrls[0]);
+  } catch (err) {
+    if (err instanceof OffTopicError) {
+      return NextResponse.json({ error: err.message, offTopic: true }, { status: 422 });
+    }
+    throw err;
+  }
 
   // 3. Create case
   const { data: newCase, error } = await supabase

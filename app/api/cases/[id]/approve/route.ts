@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient as _create } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { sendSMS } from '@/lib/twilio';
+import { checkRateLimit, rateLimitExceededResponse } from '@/lib/ratelimit';
 
 // Untyped client to avoid Supabase generic inference issues on update
 function getClient() {
@@ -17,6 +18,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const supabase = getClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // ── Rate limit: 10 SMS dispatches per hour per admin ────────────────────────
+  const smsLimit = await checkRateLimit(`sms:${session.user.id}`, 10, 3600);
+  if (!smsLimit.allowed) return rateLimitExceededResponse(smsLimit, 'sms');
 
   const { vendorId } = await req.json();
 

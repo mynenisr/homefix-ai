@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 import { classifyIssue, checkSafety, OffTopicError } from '@/lib/claude';
+import { checkRateLimit, rateLimitExceededResponse } from '@/lib/ratelimit';
 
 export async function GET() {
   const supabase = createServerClient();
@@ -16,6 +17,10 @@ export async function POST(req: Request) {
   const supabase = createServerClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // ── Rate limit: 5 case submissions per 10 minutes per user ─────────────────
+  const triageLimit = await checkRateLimit(`triage:${session.user.id}`, 5, 600);
+  if (!triageLimit.allowed) return rateLimitExceededResponse(triageLimit, 'triage');
 
   const body = await req.json();
   const { description, address, category, photoUrls = [] } = body;

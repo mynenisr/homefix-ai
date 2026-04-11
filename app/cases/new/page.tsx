@@ -18,6 +18,7 @@ export default function NewCase() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [error, setError] = useState('');
   const [offTopic, setOffTopic] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
 
   function set(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }));
@@ -62,6 +63,7 @@ export default function NewCase() {
     setLoading(true);
     setError('');
     setOffTopic(false);
+    setRateLimited(false);
 
     try {
       // Get current user for storage path
@@ -83,7 +85,8 @@ export default function NewCase() {
       });
       if (!res.ok) {
         const body = await res.json();
-        if (body.offTopic) { setOffTopic(true); setError(body.error); setLoading(false); setUploadProgress(''); return; }
+        if (body.offTopic)     { setOffTopic(true);     setError(body.error); setLoading(false); setUploadProgress(''); return; }
+        if (body.rateLimited)  { setRateLimited(true);  setError(body.error); setLoading(false); setUploadProgress(''); return; }
         throw new Error(body.error ?? res.statusText);
       }
       const { id } = await res.json();
@@ -179,7 +182,13 @@ export default function NewCase() {
               <p className="text-sm text-amber-700">{error}</p>
             </div>
           )}
-          {!offTopic && error && <p className="text-red-600 text-sm">{error}</p>}
+          {rateLimited && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <p className="text-sm font-semibold text-orange-800 mb-1">🚦 Slow Down</p>
+              <p className="text-sm text-orange-700">{error}</p>
+            </div>
+          )}
+          {!offTopic && !rateLimited && error && <p className="text-red-600 text-sm">{error}</p>}
 
           <button
             type="submit"

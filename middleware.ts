@@ -28,8 +28,15 @@ export async function middleware(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   const path = req.nextUrl.pathname;
 
-  // Always allow
-  if (path.startsWith('/auth/callback') || path.startsWith('/_next') || path === '/favicon.ico') {
+  // Always allow — auth callback, Next.js internals, and PWA static assets
+  if (
+    path.startsWith('/auth/callback') ||
+    path.startsWith('/_next') ||
+    path.startsWith('/icons/') ||
+    path === '/sw.js' ||
+    path === '/manifest.json' ||
+    path === '/favicon.ico'
+  ) {
     return res;
   }
 
@@ -53,5 +60,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons|sw.js|manifest.json|api/).*)'],
 };

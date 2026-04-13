@@ -44,14 +44,40 @@ export default function NewCase() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
+  // Re-encode any image (including iOS HEIC) as JPEG via canvas.
+  // Fixes: iOS HEIC has empty photoFile.type → Supabase rejects empty contentType.
+  // Bonus: caps resolution at 1920px and compresses to ~85% quality.
+  async function reencodeAsJpeg(file: File): Promise<Blob> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1920;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+          else { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(objectUrl);
+        canvas.toBlob((blob) => resolve(blob ?? file), 'image/jpeg', 0.85);
+      };
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+      img.src = objectUrl;
+    });
+  }
+
   async function uploadPhoto(userId: string): Promise<string | null> {
     if (!photoFile) return null;
     setUploadProgress('Uploading photo…');
-    const ext = photoFile.name.split('.').pop() ?? 'jpg';
-    const path = `${userId}/${Date.now()}.${ext}`;
+    const jpeg = await reencodeAsJpeg(photoFile);
+    const path = `${userId}/${Date.now()}.jpg`;
     const { error } = await supabase.storage
       .from('case-photos')
-      .upload(path, photoFile, { contentType: photoFile.type, upsert: false });
+      .upload(path, jpeg, { contentType: 'image/jpeg', upsert: false });
     if (error) throw new Error(`Photo upload failed: ${error.message}`);
     const { data } = supabase.storage.from('case-photos').getPublicUrl(path);
     return data.publicUrl;

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import Nav from '@/components/Nav';
 import { StatusBadge, SeverityBadge } from '@/components/StatusBadge';
+import InstallPrompt from '@/components/InstallPrompt';
 import type { Case } from '@/lib/database.types';
 
 export default async function Dashboard() {
@@ -42,6 +43,7 @@ export default async function Dashboard() {
   return (
     <>
       <Nav role={role} />
+      <InstallPrompt />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>

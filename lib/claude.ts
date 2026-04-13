@@ -141,31 +141,50 @@ export async function classifyIssue(
 
   console.log(`[HomeFix] Using model: ${MODEL}`);
 
-  const message = await getClient().messages.create({
-    model: MODEL,
-    max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: userContent }],
-  });
+  try {
+    const message = await getClient().messages.create({
+      model: MODEL,
+      max_tokens: 1024,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userContent }],
+    });
 
-  const content = message.content[0];
-  if (content.type !== 'text') throw new Error('Unexpected response type from Claude');
+    const content = message.content[0];
+    if (content.type !== 'text') throw new Error('Unexpected response type from Claude');
 
-  // Strip markdown code fences if Claude wraps the JSON
-  const raw = content.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-  console.log('[HomeFix] Claude raw response:', raw.slice(0, 200));
+    // Strip markdown code fences if Claude wraps the JSON
+    const raw = content.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    console.log('[HomeFix] Claude raw response:', raw.slice(0, 200));
 
-  const result = JSON.parse(raw) as TriageResult;
+    const result = JSON.parse(raw) as TriageResult;
 
-  // If Claude itself determined off-topic, throw so caller handles it cleanly
-  if (!result.isRelevant) {
-    throw new OffTopicError(
-      result.offTopicMessage ??
-      'HomeFix AI only handles home repair and maintenance requests.'
-    );
+    // If Claude itself determined off-topic, throw so caller handles it cleanly
+    if (!result.isRelevant) {
+      throw new OffTopicError(
+        result.offTopicMessage ??
+        'HomeFix AI only handles home repair and maintenance requests.'
+      );
+    }
+
+    return result;
+
+  } catch (err) {
+    // Re-throw OffTopicError — caller handles it intentionally
+    if (err instanceof OffTopicError) throw err;
+    // Any other error (API failure, JSON parse, network) — log and return safe default
+    // so the case is still created and a PM can manually review
+    console.error('[HomeFix] Claude classification error:', err);
+    return {
+      isRelevant: true,
+      offTopicMessage: null,
+      category: 'GENERAL' as CaseCategory,
+      severity: 'NORMAL' as Severity,
+      confidence: 0,
+      diagnosis: 'AI triage unavailable. A property manager will review your request manually.',
+      safetyFlags: [],
+      playbook: null,
+    };
   }
-
-  return result;
 }
 
 export async function checkSafety(

@@ -14,13 +14,18 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  try {
   const supabase = createServerClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // ── Rate limit: 5 case submissions per 10 minutes per user ─────────────────
-  const triageLimit = await checkRateLimit(`triage:${session.user.id}`, 5, 600);
-  if (!triageLimit.allowed) return rateLimitExceededResponse(triageLimit, 'triage');
+  try {
+    const triageLimit = await checkRateLimit(`triage:${session.user.id}`, 5, 600);
+    if (!triageLimit.allowed) return rateLimitExceededResponse(triageLimit, 'triage');
+  } catch {
+    // Rate limiter failed — fail open, don't block the user
+  }
 
   const body = await req.json();
   const { description, address, category, photoUrls = [] } = body;
@@ -28,7 +33,7 @@ export async function POST(req: Request) {
   // 1. Safety check first (keyword-based, no AI cost)
   const safety = await checkSafety(description);
 
-  // 2. AI triage — throws OffTopicError if not home-repair related
+  // 2. AI triage — classifyIssue now has internal fallback; only throws OffTopicError
   let triage;
   try {
     triage = await classifyIssue(description, photoUrls[0]);
@@ -80,4 +85,13 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ id: newCase.id });
+
+  } catch (err: any) {
+    // Top-level catch — always return JSON so mobile browsers don't get HTML 500
+    console.error('[HomeFix] POST /api/cases unhandled error:', err);
+    return NextResponse.json(
+      { error: err?.message ?? 'Something went wrong. Please try again.' },
+      { status: 500 }
+    );
+  }
 }

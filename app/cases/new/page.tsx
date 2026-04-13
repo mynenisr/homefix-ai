@@ -110,10 +110,11 @@ export default function NewCase() {
         }),
       });
       if (!res.ok) {
-        const body = await res.json();
-        if (body.offTopic)     { setOffTopic(true);     setError(body.error); setLoading(false); setUploadProgress(''); return; }
-        if (body.rateLimited)  { setRateLimited(true);  setError(body.error); setLoading(false); setUploadProgress(''); return; }
-        throw new Error(body.error ?? res.statusText);
+        let body: any = {};
+        try { body = await res.json(); } catch { /* HTML error page — ignore */ }
+        if (body.offTopic)    { setOffTopic(true);    setError(body.error); setLoading(false); setUploadProgress(''); return; }
+        if (body.rateLimited) { setRateLimited(true); setError(body.error); setLoading(false); setUploadProgress(''); return; }
+        throw new Error(body.error ?? `Server error (${res.status}). Please try again.`);
       }
       const { id } = await res.json();
       router.push(`/cases/${id}`);

@@ -19,7 +19,16 @@ export async function GET(request: Request) {
         },
       }
     );
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return NextResponse.redirect(`${origin}/login?error=link_expired`);
+    }
+  }
+
+  // Also handle Supabase hash-based errors (e.g. ?error=access_denied in query)
+  const urlError = searchParams.get('error');
+  if (urlError) {
+    return NextResponse.redirect(`${origin}/login?error=link_expired`);
   }
 
   return NextResponse.redirect(`${origin}/dashboard`);

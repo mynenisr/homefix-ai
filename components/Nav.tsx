@@ -16,7 +16,7 @@ export default function Nav({ role }: NavProps) {
   const links = [
     { href: '/dashboard', label: isAdmin ? 'All Cases' : 'My Cases' },
     { href: '/cases/new', label: 'New Case' },
-    ...(isAdmin ? [{ href: '/admin/vendors', label: 'Vendors' }] : []),
+    ...(isAdmin ? [{ href: '/admin/vendors', label: 'Admin' }] : []),
   ];
 
   async function signOut() {
@@ -31,7 +31,7 @@ export default function Nav({ role }: NavProps) {
         <Link
           key={l.href}
           href={l.href}
-          className={`text-sm ${path === l.href ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+          className={`text-sm ${path.startsWith(l.href) ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
         >
           {l.label}
         </Link>

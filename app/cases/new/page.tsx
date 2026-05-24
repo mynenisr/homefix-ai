@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Nav from '@/components/Nav';
 import { createBrowserClient } from '@/lib/supabase';
@@ -12,6 +12,13 @@ export default function NewCase() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({ description: '', address: '', category: '' });
+  const [properties, setProperties] = useState<any[]>([]);
+  const [selectedPropId, setSelectedPropId] = useState('');
+
+  // Load managed properties for the dropdown (empty = type manually)
+  useEffect(() => {
+    fetch('/api/properties').then(r => r.ok ? r.json() : []).then(setProperties).catch(() => {});
+  }, []);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -145,13 +152,54 @@ export default function NewCase() {
 
           <div>
             <label className="block text-sm font-medium mb-1">Property address</label>
-            <input
-              type="text"
-              placeholder="123 Main St, City, State"
-              value={form.address}
-              onChange={e => set('address', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {properties.length > 0 ? (
+              <div className="space-y-2">
+                <select
+                  value={selectedPropId}
+                  onChange={e => {
+                    setSelectedPropId(e.target.value);
+                    const p = properties.find(p => p.id === e.target.value);
+                    if (p) {
+                      const full = [p.address, p.unit ? `Unit ${p.unit}` : '', `${p.city}, ${p.state}`, p.zip].filter(Boolean).join(', ');
+                      set('address', full);
+                    } else {
+                      set('address', '');
+                    }
+                  }}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">— Select a property —</option>
+                  {Array.from(new Set(properties.map(p => p.market))).map(market => (
+                    <optgroup key={market} label={market}>
+                      {properties.filter(p => p.market === market).map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                  <option value="__other__">Other (type manually)</option>
+                </select>
+                {(selectedPropId === '__other__' || !selectedPropId) && (
+                  <input
+                    type="text"
+                    placeholder="123 Main St, City, State"
+                    value={form.address}
+                    onChange={e => set('address', e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+                {selectedPropId && selectedPropId !== '__other__' && (
+                  <p className="text-xs text-gray-500">{form.address}</p>
+                )}
+              </div>
+            ) : (
+              <input
+                type="text"
+                placeholder="123 Main St, City, State"
+                value={form.address}
+                onChange={e => set('address', e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
           </div>
 
           <div>

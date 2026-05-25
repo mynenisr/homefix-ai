@@ -19,6 +19,15 @@ export default async function Dashboard() {
     .eq('id', session.user.id)
     .single();
 
+  // If this user's email matches a vendor record, send them to the vendor portal
+  const { data: vendorMatch } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('email', session.user.email!)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (vendorMatch) redirect('/vendor/cases');
+
   const role = profile?.role ?? 'HOMEOWNER';
   const isAdmin = role === 'ADMIN' || role === 'PROPERTY_MANAGER';
 

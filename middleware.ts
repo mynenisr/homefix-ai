@@ -46,7 +46,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // Authenticated on login page → dashboard
+  // Authenticated on login page → dashboard (role-based redirect happens in dashboard)
   if (path.startsWith('/login')) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }

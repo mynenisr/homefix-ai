@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 import { classifyIssue, checkSafety, OffTopicError } from '@/lib/claude';
 import { checkRateLimit, rateLimitExceededResponse } from '@/lib/ratelimit';
+import { emailNewCase } from '@/lib/email';
 
 export async function GET() {
   const supabase = createServerClient();
@@ -83,6 +84,18 @@ export async function POST(req: Request) {
       description: 'Case queued for vendor matching. Awaiting admin approval.',
     });
   }
+
+  // 6. Email PMs about new case (fire-and-forget)
+  supabase
+    .from('users')
+    .select('email')
+    .in('role', ['ADMIN', 'PROPERTY_MANAGER'])
+    .then(({ data: pms }) => {
+      if (pms?.length) {
+        const pmEmails = pms.map(u => u.email).filter(Boolean) as string[];
+        emailNewCase(pmEmails, newCase.id, description, newCase.severity, newCase.category, address);
+      }
+    });
 
   return NextResponse.json({ id: newCase.id });
 

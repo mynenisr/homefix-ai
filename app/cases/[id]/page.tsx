@@ -73,7 +73,11 @@ export default async function CaseDetail({ params }: { params: { id: string } })
           <div className="flex items-center gap-2">
             <SeverityBadge severity={c.severity} />
             <StatusBadge status={c.status} />
-            {canMarkComplete && <CompleteButton caseId={c.id} />}
+            {canMarkComplete && (
+              <div className="w-full mt-3">
+                <CompleteButton caseId={c.id} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -151,6 +155,21 @@ export default async function CaseDetail({ params }: { params: { id: string } })
                 </span>
                 {c.vendor.rating && (
                   <span className="ml-2 text-xs text-gray-500">★ {Number(c.vendor.rating).toFixed(1)}</span>
+                )}
+              </div>
+            )}
+
+            {/* Invoice summary — shown when completed and amount/notes exist */}
+            {isCompleted && (c.invoice_amount || c.invoice_notes) && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                <p className="text-sm font-medium text-green-800 mb-2">✓ Job Completed</p>
+                {c.invoice_amount && (
+                  <p className="text-2xl font-bold text-green-700 mb-1">
+                    ${Number(c.invoice_amount).toFixed(2)}
+                  </p>
+                )}
+                {c.invoice_notes && (
+                  <p className="text-sm text-green-700">{c.invoice_notes}</p>
                 )}
               </div>
             )}

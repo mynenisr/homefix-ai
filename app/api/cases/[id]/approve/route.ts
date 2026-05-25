@@ -3,6 +3,7 @@ import { createServerClient as _create } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { sendSMS } from '@/lib/twilio';
 import { checkRateLimit, rateLimitExceededResponse } from '@/lib/ratelimit';
+import { emailVendorAssigned } from '@/lib/email';
 
 // Untyped client to avoid Supabase generic inference issues on update
 function getClient() {
@@ -44,6 +45,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const message = `HomeFix AI: New job assigned.\nCase #${params.id.slice(0, 8)} | ${c.category} — ${c.severity}\n${c.description.slice(0, 120)}\nAddress: ${c.address ?? 'TBD'}\nReply CONFIRM to accept.`;
   await sendSMS(vendor.phone, message);
+
+  // Email homeowner that vendor has been assigned (fire-and-forget)
+  const { data: homeowner } = await supabase
+    .from('users').select('email').eq('id', c.user_id).single();
+  if (homeowner?.email) {
+    emailVendorAssigned(homeowner.email, params.id, vendor.name, vendor.phone, c.category);
+  }
 
   return NextResponse.json({ success: true });
 }

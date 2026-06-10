@@ -4,7 +4,7 @@
  * Stubs to console.log if the key is missing (dev/test mode).
  */
 
-const FROM = process.env.FROM_EMAIL ?? 'HomeFix AI <noreply@realtorsrini.com>';
+const FROM = process.env.FROM_EMAIL ?? 'HomeFix AI <noreply@excitere.ai>';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://homefix-ai.vercel.app';
 
 function getResend() {

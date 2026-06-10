@@ -8,6 +8,63 @@ const ROLE_COLORS: Record<string, string> = {
   HOMEOWNER: 'bg-gray-100 text-gray-600',
 };
 
+function InviteForm() {
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<'success' | 'error' | null>(null);
+  const [errMsg, setErrMsg] = useState('');
+
+  async function send() {
+    if (!email.trim()) return;
+    setSending(true);
+    setResult(null);
+    const res = await fetch('/api/admin/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    });
+    if (res.ok) {
+      setResult('success');
+      setEmail('');
+    } else {
+      const body = await res.json();
+      setErrMsg(body.error ?? 'Failed to send invite');
+      setResult('error');
+    }
+    setSending(false);
+  }
+
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+      <p className="text-sm font-semibold text-blue-800 mb-1">Invite a Tenant / Homeowner</p>
+      <p className="text-xs text-gray-500 mb-3">They'll receive a branded email with a one-click sign-in link. No password needed.</p>
+      <div className="flex gap-2">
+        <input
+          type="email"
+          placeholder="tenant@email.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={send}
+          disabled={sending || !email.trim()}
+          className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+        >
+          {sending ? 'Sending…' : 'Send Invite'}
+        </button>
+      </div>
+      {result === 'success' && (
+        <p className="text-xs text-green-700 mt-2">✓ Invite sent! They'll get an email with a sign-in link.</p>
+      )}
+      {result === 'error' && (
+        <p className="text-xs text-red-600 mt-2">{errMsg}</p>
+      )}
+    </div>
+  );
+}
+
 export default function UsersAdmin() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +96,7 @@ export default function UsersAdmin() {
 
   return (
     <div className="space-y-4">
+      <InviteForm />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Users ({users.length})</h2>
         <p className="text-xs text-gray-500">Change a role then click Save.</p>

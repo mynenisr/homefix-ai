@@ -121,3 +121,27 @@ export async function emailCaseCompleted(
   `);
   await send(homeownerEmail, `Your ${category} repair is complete`, html);
 }
+
+/** Send a branded invite to a new homeowner/tenant. */
+export async function emailInvite(
+  toEmail: string,
+  inviteLink: string,
+  inviterName?: string
+) {
+  const html = wrap(`
+    <h2 style="margin:0 0 8px;">You're invited to HomeFix AI</h2>
+    <p style="color:#6b7280;margin:0 0 16px;">
+      ${inviterName ? `<strong>${inviterName}</strong> has invited you` : "You've been invited"} to submit and track maintenance requests online — no more phone tag.
+    </p>
+    <ul style="font-size:14px;color:#374151;margin:0 0 24px;padding-left:20px;line-height:1.8;">
+      <li>Submit issues with photos from your phone</li>
+      <li>Get real-time status updates by email</li>
+      <li>Know exactly when your vendor is coming</li>
+    </ul>
+    <a href="${inviteLink}" style="background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">
+      Accept Invitation →
+    </a>
+    <p style="font-size:12px;color:#9ca3af;margin:16px 0 0;">This link expires in 24 hours. If you didn't expect this, you can safely ignore it.</p>
+  `);
+  await send(toEmail, 'You\'re invited to HomeFix AI', html);
+}

@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/admin-guard';
 import { emailInvite } from '@/lib/email';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://excitere.ai';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://homefix-ai.vercel.app';
 
 export async function POST(req: Request) {
   const session = await requireAdmin();

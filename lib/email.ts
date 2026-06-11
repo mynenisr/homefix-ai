@@ -5,7 +5,7 @@
  */
 
 const FROM = process.env.FROM_EMAIL ?? 'HomeFix AI <noreply@excitere.ai>';
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://homefix-ai.vercel.app';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://homefix-ai.vercel.app'; // override via NEXT_PUBLIC_APP_URL in Vercel env
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;

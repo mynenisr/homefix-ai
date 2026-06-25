@@ -25,9 +25,16 @@ export async function GET(request: Request) {
     }
   }
 
-  // Also handle Supabase hash-based errors (e.g. ?error=access_denied in query)
+  // Handle ?error= in query string (some Supabase flows)
   const urlError = searchParams.get('error');
   if (urlError) {
+    return NextResponse.redirect(`${origin}/login?error=link_expired`);
+  }
+
+  // If no code arrived at all, redirect to login with a hint.
+  // Hash-based errors (#error=access_denied) are invisible server-side —
+  // the login page's client-side script already strips and handles them.
+  if (!code) {
     return NextResponse.redirect(`${origin}/login?error=link_expired`);
   }
 

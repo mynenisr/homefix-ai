@@ -8,6 +8,7 @@ function LoginForm() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [linkExpired, setLinkExpired] = useState(false);
+  const [sendError, setSendError] = useState('');
   const supabase = createBrowserClient();
   const searchParams = useSearchParams();
 
@@ -25,11 +26,16 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setLinkExpired(false);
-    await supabase.auth.signInWithOtp({
+    setSendError('');
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || location.origin}/auth/callback` },
     });
-    setSent(true);
+    if (error) {
+      setSendError(error.message);
+    } else {
+      setSent(true);
+    }
     setLoading(false);
   }
 
@@ -58,6 +64,9 @@ function LoginForm() {
               onChange={e => setEmail(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {sendError && (
+              <p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">{sendError}</p>
+            )}
             <button
               type="submit"
               disabled={loading}
